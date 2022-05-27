@@ -1,11 +1,8 @@
-// 1. Get Professor Name
-
-function getProfessorNameListAndClass() {
+function injectRatings() {
     
-    const professorList = [];
 
     // Select the document with all Classes
-    var allClassPageElement = document.querySelectorAll("iframe")[2];
+    var allClassPageElement = document.querySelectorAll("iframe")[2]
 
     // Double Check if allClassPage is in the correct position
     if (allClassPageElement && allClassPageElement.id == "lbFrameContent") {
@@ -14,16 +11,16 @@ function getProfessorNameListAndClass() {
         var allClassPage = (allClassPageElement.contentDocument) ? allClassPageElement.contentDocument : allClassPageElement.contentWindow.document;
 
         // Select the table of each individual class
-        var allClassesInfo = allClassPage.querySelectorAll(".ps-htmlarea td");
+        var allClassesInfo = allClassPage.querySelectorAll(".ps-htmlarea td")
 
+        
         // Check if this page has already been scanned
         if (allClassesInfo[0] != previous_page[0]) {
             
             if (allClassesInfo[0] != undefined) {
 
-
                 // Retrieve the url of the DataBase of the Professor
-                var professorurl = "https://search-production.ratemyprofessors.com/solr/rmp/select/?solrformat=true&rows=2&wt=json&q=";
+                var professorurl = "https://search-production.ratemyprofessors.com/solr/rmp/select/?solrformat=true&rows=2&wt=json&q="
 
                 // Go through all of the classes
                 for (let currentClassIndex = 0; currentClassIndex < allClassesInfo.length; currentClassIndex++) {
@@ -34,7 +31,6 @@ function getProfessorNameListAndClass() {
                         // Select the Class Code
                         var classCode = allClassesInfo[currentClassIndex].firstElementChild.firstElementChild.innerHTML;
                         classCode = classCode[classCode.length - 1].replace(/[^\d.-]/g, "");
-
 
                         // Select the Course Description
                         var classInfoText = allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.wholeText.trim().split(" ");
@@ -47,10 +43,23 @@ function getProfessorNameListAndClass() {
                             var lastName = classInfoText[classInfoText.length - 2].replace(/[,;]/g, "").toLowerCase();
 
                             // Finalize the database link for the professor
-                            thisProfessorurl = professorurl + firstName + "+" + lastName;
+                            const thisProfessorurl = professorurl + firstName + "+" + lastName;
 
-                            // Append the information to professorList (professorurl, classInfoText)
-                            professorList.push([thisprofessorurl, allClassesInfo[currentClassIndex], classCode])
+                            // Find professor ID
+                            const professorID = getProfessorID(thisProfessorurl)
+
+                            // Calculate overall professor/class rating (return professor rating, sample size, would take again, difficulty)
+
+                            var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = getInfoFromRMPDataBase(professorID, classCode)
+
+                            // Calculate Trust Interval for professor/class
+
+                            // const professorInterval = getProfessorTrustInterval(overallSampleSize)
+                            // const classInterval = getProfessorTrustInterval(classSampleSize)
+
+                            // Inject All (also inject trust interval)
+                            injectScript(overallRating, overallDifficulty, overallSampleSize, classRating, classDifficulty, classSampleSize)
+
                         }
 
                     }
@@ -58,69 +67,60 @@ function getProfessorNameListAndClass() {
                 }
             }
         }
-        // Save current Page to Aviod Duplicate
-        previousPage = allClassesInfo;
+
+        
 
     }
-
-    return professorList;
 }
+
 
 
 // 2. Get Professor Rating
 
-function getProfessorRatings(professorClassList) {
+function getProfessorID(professorurl) {
 
     // Set array of school id
-    var schoolsId = ["675", "772", "4114", "5165"];
+    var schoolsId = ["675", "772", "4114", "5165"]
 
-    // Iterate through each class
-    for (let professorIndex = 0; professorIndex < professorClassList.length; professorIndex++) {
+    // Sent the function to main script
+    chrome.runtime.sendMessage({ url: professorurl, type: "profRating"}, function (response) {
 
-        // Sent the function to main script
-        chrome.runtime.sendMessage({ url: professorClassList[professorIndex][0], type: "profRating"}, function (response) {
+        // Change website to JSON
+        var resp = response.JSONresponse;
 
-            // Change website to JSON
-            var resp = response.JSONresponse;
+        // Go to numFound class of the JSON
+        var numFound = resp.response.numFound;
 
-            // Go to numFound class of the JSON
-            var numFound = resp.response.numFound;
+        // Check if the professor data is found
+        if (numFound > 0) {
 
-            // Check if the professor data is found
-            if (numFound > 0) {
+            // Set variable to see if nyu professor is found
+            let foundNYU = false;
 
-                // Set variable to see if nyu professor is found
-                let foundNYU = false;
+            // Iterate through each found professor
+            for (let currentProfessorIndex = 0; currentProfessorIndex < numFound; currentProfessorIndex++) {
 
-                // Iterate through each found professor
-                for (let currentProfessorIndex = 0; currentProfessorIndex < numFound; currentProfessorIndex++) {
+                // Check if NYU school is found
+                if (resp.response.docs[currentProfessorIndex] != undefined && schoolsId.includes(resp.response.docs[currentProfessorIndex].schoolid_s)) {
 
-                    // Check if NYU school is found
-                    if (resp.response.docs[currentProfessorIndex] != undefined && schoolsId.includes(resp.response.docs[currentProfessorIndex].schoolid_s)) {
+                    // Set foundNYU to true
+                    foundNYU = true;
 
-                        // Set foundNYU to true
-                        foundNYU = true;
+                    // Find Professor ID
+                    var profID = resp.response.docs[currentProfessorIndex].pk_id;
+                    const totalProfessorRatingList = getInfoFromRMPDataBase(profID, professorClassList[professorIndex][2])
 
-                        // Find Professor ID
-                        var profID = resp.response.docs[currentProfessorIndex].pk_id;
-                        const totalProfessorRatingList = getInfoFromRMPDataBase(profID, professorClassList[professorIndex][2])
-
-                        
-                    }
+                    
                 }
-
             }
+
+        }
 
         })
     }
 
-    
-}
-
 
 function getInfoFromRMPDataBase(professorID, classCodeString) {
-    // Store Rating, Class, Level Of Difficulty
-
 
     // Set Current Page
     let currentPage = 1;
@@ -208,7 +208,7 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
 
     // return [Overall Rating, Class Rating, Level Of Difficulty Overall, 
     // Level Of Difficulty of the Class, [Overall Sample Size, Class Sample Size]]
-    return [overallRating, classRating, overallDifficulty, classDifficulty, [overallSampleSize, classSampleSize]]
+    return [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize]
 }
 
 
@@ -220,14 +220,9 @@ function getAverageFromList(list) {
 }
 
 
+// 3. Get Credibility (Sample Size)
 
-// 3. Get Course Evaluation Rating
-
-
-
-// 4. Get Credibility (Sample Size)
-
-function getCredibility(size) {
+function getTrustInterval(size) {
     if (size >= 50) {
         return "Very Reliable"
     }
@@ -245,10 +240,9 @@ function getCredibility(size) {
     }
 }
 
-// 5. Get Credibility Interval
 
+// 4. Add Professor Rating ToolBox
 
+function injectScript() {
 
-// 6. Add ToolBox
-
-
+}
