@@ -54,11 +54,26 @@ function injectRatings() {
 
                             // Calculate Trust Interval for professor/class
 
-                            // const professorInterval = getProfessorTrustInterval(overallSampleSize)
-                            // const classInterval = getProfessorTrustInterval(classSampleSize)
+                            var [professorTrustInterval, professorColor] = getProfessorTrustInterval(overallSampleSize)
+                            var [classTrustInterval, classColor] = getProfessorTrustInterval(classSampleSize)
+
+                            // Create professor and class links
+                            var professorLink = " <a style='color: \"" + professorColor + "\"; font-weight: bold'>(" + overallRating + ")</a>"
+                            var classLink = " <a style='color: \"" + classColor + "\"; font-weight: bold'>(" + classRating + ")</a>"
+
+
+                            // Create Div
+                            var insertedDIV = document.createElement("div")
+                            insertedDIV.style.display = "inline"
+                            insertedDIV.innerHTML = professorLink + " " + classLink;
+
+                            // 
 
                             // Inject All (also inject trust interval)
-                            injectScript(overallRating, overallDifficulty, overallSampleSize, classRating, classDifficulty, classSampleSize)
+                            injectScript(insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval)
+
+                            // Inject the DIV
+                            allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(insertedDIV, allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling); 
 
                         }
 
@@ -224,19 +239,19 @@ function getAverageFromList(list) {
 
 function getTrustInterval(size) {
     if (size >= 50) {
-        return "Very Reliable"
+        return "Very Reliable", "Dark Green"
     }
     else if (49 >= size >= 30) {
-        return "Reliable"
+        return "Reliable", "Green"
     }
     else if (29 >= size >= 20) {
-        return "Semi-Reliable"
+        return "Semi-Reliable", "Light Green"
     }
     else if (19 >= size >= 10) {
-        return "Not Very Reliable"
+        return "Not Very Reliable", "Yellow"
     }
     else {
-        return "Do Not Rely"
+        return "Do Not Rely", "Red"
     }
 }
 
