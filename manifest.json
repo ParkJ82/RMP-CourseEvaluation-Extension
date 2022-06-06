@@ -3,18 +3,21 @@
     "description": "Only take easy classes!",
     "version": "1.0",
     "manifest_version": 3,
+    "update_url": "https://clients2.google.com/service/update2/crx",
+    "host_permissions": [ "https://search-production.ratemyprofessors.com/*" ],
     "background": {
         "service_worker": "background.js"
     },
     "content_scripts": [{
-        "js": ["main-script.js"]
+        "js": ["main-script.js"],
+        "matches": [ "https://sis.portal.nyu.edu/*", "https://sis.portal.nyu.edu/" ]
     }],
-    "permissions": ["scripting",
-            "activeTab",
-            "https://sis.portal.nyu.edu/*",
-            "https://search-production.ratemyprofessors.com/*"
-    ],
+    "permissions": ["scripting", "activeTab"],
     "action": {
         "default_popup": "popup.html"
-    }
+    }, 
+    "web_accessible_resources": [ {
+        "matches": [ "https://sis.nyu.edu/*" ],
+        "resources": [ "tooltip.css", "fonts/Lato-SemiboldItalic.ttf", "fonts/Lato-Regular.ttf" ]
+     } ]
 }

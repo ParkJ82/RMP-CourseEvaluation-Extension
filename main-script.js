@@ -1,3 +1,11 @@
+var previousPage = [];
+
+window.addEventListener("clicked", function(evt) {
+
+    injectRatings();
+  
+});
+
 function injectRatings() {
     
 
@@ -29,7 +37,7 @@ function injectRatings() {
                     if (allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling && allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.wholeText) {
 
                         // Select the Class Code
-                        var classCode = allClassesInfo[currentClassIndex].firstElementChild.firstElementChild.innerHTML;
+                        var classCode = allClassesInfo[currentClassIndex].firstElementChild.firstElementChild.textContent.split(" ");
                         classCode = classCode[classCode.length - 1].replace(/[^\d.-]/g, "");
 
                         // Select the Course Description
@@ -48,32 +56,33 @@ function injectRatings() {
                             // Find professor ID
                             const professorID = getProfessorID(thisProfessorurl)
 
-                            // Calculate overall professor/class rating (return professor rating, sample size, would take again, difficulty)
+                            if (professorID === null) {
+                                addNA(allClassesInfo[currentClassIndex])
+                            } else {
+                                // Calculate overall professor/class rating (return professor rating, sample size, would take again, difficulty)
 
-                            var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = getInfoFromRMPDataBase(professorID, classCode)
+                                var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = getInfoFromRMPDataBase(professorID, classCode)
 
-                            // Calculate Trust Interval for professor/class
+                                // Calculate Trust Interval for professor/class
 
-                            var [professorTrustInterval, professorColor] = getProfessorTrustInterval(overallSampleSize)
-                            var [classTrustInterval, classColor] = getProfessorTrustInterval(classSampleSize)
+                                var [professorTrustInterval, professorColor] = getProfessorTrustInterval(overallSampleSize)
+                                var [classTrustInterval, classColor] = getProfessorTrustInterval(classSampleSize)
 
-                            // Create professor and class links
-                            var professorLink = " <a style='color: \"" + professorColor + "\"; font-weight: bold'>(" + overallRating + ")</a>"
-                            var classLink = " <a style='color: \"" + classColor + "\"; font-weight: bold'>(" + classRating + ")</a>"
+                                // Create professor and class links
+                                var professorLink = " <a style='color: \"" + professorColor + "\"; font-weight: bold'>(" + overallRating + ")</a>"
+                                var classLink = " <a style='color: \"" + classColor + "\"; font-weight: bold'>(" + classRating + ")</a>"
 
+                                // Create Div
+                                var insertedDIV = document.createElement("div")
+                                insertedDIV.style.display = "inline"
+                                insertedDIV.innerHTML = professorLink + " " + classLink;
 
-                            // Create Div
-                            var insertedDIV = document.createElement("div")
-                            insertedDIV.style.display = "inline"
-                            insertedDIV.innerHTML = professorLink + " " + classLink;
+                                // Insert Additional Information to DIV
+                                popUpInfo(firstName, lastName, insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval)
 
-                            // 
-
-                            // Inject All (also inject trust interval)
-                            injectScript(insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval)
-
-                            // Inject the DIV
-                            allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(insertedDIV, allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling); 
+                                // Inject the DIV
+                                allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(insertedDIV, allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling); 
+                            } 
 
                         }
 
@@ -83,6 +92,8 @@ function injectRatings() {
             }
         }
 
+        // Save page
+        previousPage = allClassesInfo
         
 
     }
@@ -109,26 +120,22 @@ function getProfessorID(professorurl) {
         // Check if the professor data is found
         if (numFound > 0) {
 
-            // Set variable to see if nyu professor is found
-            let foundNYU = false;
-
             // Iterate through each found professor
             for (let currentProfessorIndex = 0; currentProfessorIndex < numFound; currentProfessorIndex++) {
 
                 // Check if NYU school is found
                 if (resp.response.docs[currentProfessorIndex] != undefined && schoolsId.includes(resp.response.docs[currentProfessorIndex].schoolid_s)) {
 
-                    // Set foundNYU to true
-                    foundNYU = true;
 
                     // Find Professor ID
                     var profID = resp.response.docs[currentProfessorIndex].pk_id;
-                    const totalProfessorRatingList = getInfoFromRMPDataBase(profID, professorClassList[professorIndex][2])
+                    return profID
 
                     
                 }
             }
 
+            return null
         }
 
         })
@@ -222,7 +229,7 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
     const classDifficulty = getAverageFromList(classDifficultyList);
 
     // return [Overall Rating, Class Rating, Level Of Difficulty Overall, 
-    // Level Of Difficulty of the Class, [Overall Sample Size, Class Sample Size]]
+    // Level Of Difficulty of the Class, Overall Sample Size, Class Sample Size]
     return [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize]
 }
 
@@ -256,8 +263,54 @@ function getTrustInterval(size) {
 }
 
 
+// Edit this function
+function addNA(currentText){  // function that adds N/A
+    var profURL = "https://www.ratemyprofessors.com/AddTeacher.jsp";
+    var link = " <a style='color: green; font-weight: bold' href=\"" + profURL + "\" target=\"_blank\">(N/A)</a>";
+    var newDiv = document.createElement("div");
+    newDiv.style.display = "inline";
+    newDiv.innerHTML = link;
+    //insert the div after the professor's name
+    currentText.firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(newDiv, currentText.firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling);
+  }
+
+
 // 4. Add Professor Rating ToolBox
 
-function injectScript() {
+function popUpInfo(firstName, lastName, insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval) {
+
+    // Create inner popup info
+    var popUpDIV = document.createElement("div")
+    var title = document.createElement("h3")
+    title.textContent = "Specific Ratings"
+    var professorText = document.createElement("p")
+    professorText.textContent = "Professor Name: " + firstName + " " + lastName
+    var professorRating = document.createElement("p")
+    professorRating.textContent = "Professor Rating: " + overallRating
+    var specificRating = document.createElement("p")
+    specificRating.textContent = "Class Rating: " + classRating
+    var professorDifficulty = document.createElement("p")
+    professorDifficulty.textContent = "Professor Difficulty: " + overallDifficulty
+    var specificDifficulty = document.createElement("p")
+    specificDifficulty.textContent = "Class Difficulty: " + classDifficulty
+    var overallTrustInterval = document.createElement("p")
+    overallTrustInterval.textContent = "Professor Rating Reliability: " + professorTrustInterval + " (Sample Size: " + overallSampleSize + ")"
+    var specificTrustInterval = document.createElement("p")
+    specificTrustInterval.textContent = "Class Rating Reliability: " + classTrustInterval + " (Sample Size: " + classSampleSize + ")"
+
+    // 
+    popUpDIV.appendChild(title)
+    popUpDIV.appendChild(professorText)
+    popUpDIV.appendChild(professorRating)
+    popUpDIV.appendChild(specificRating)
+    popUpDIV.appendChild(professorDifficulty)
+    popUpDIV.appendChild(specificDifficulty)
+    popUpDIV.appendChild(overallTrustInterval)
+    popUpDIV.appendChild(specificTrustInterval)
+
+    //
+    popUpDIV.classList.add("tooltiptext")
+    insertedDIV.classList.add("tooltip")
+    insertedDIV.appendChild(popUpDIV)
 
 }
