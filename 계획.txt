@@ -1,0 +1,62 @@
+1. Inject RMP
+
+
+
+source code = https://search-production.ratemyprofessors.com/solr/rmp/select/?solrformat=true&rows=2&wt=json&q="First"+"Last"
+
+
+javascript classes (Overall):
+Numerator: class="RatingValue__Numerator-qw8sqy-2 liyUjw"
+Denominator: 5
+sample size: href="#ratingsList"
+Will Take Again/Level Of Difficulty: class="FeedbackItem__FeedbackNumber-uof32n-1 kkESWs"
+
+javascript classes (Instructor for this class):
+
+
+Options: Overall Instructor, Instructor for this class
+
+2. Inject course evaluations
+
+javascript classes (Overall):
+sample size: id="NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_TOT_R"
+Overall evaluation of the course: id="NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$0"
+The course objectives were clearly stated.: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$1"
+The course was well organized.: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$2"
+The course was intellectually stimulating.: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$3"
+Overall evaluation of the instructor.: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$4"
+The instructor provided an environment that was conducive to learning.: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$4"
+The instructor provided helpful feedback on assessed class components (e.g., exams, papers).: "NYU_CEV_PUB_WRK_NYU_CRSEVL_Q_AVRGE$5"
+(varies by course)
+
+3. Set Trust Interval
+
+50~ >= Very Reliable
+30~49 >= Reliable (Green)
+20~29 >= Semi-Reliable
+10~19 >= Not very reliable
+10 or less: Do not rely
+
+
+
+Difference Between Rmp and Course Evaluations
+Perfect: The percentage only differs by up to 5%
+Very Good: Up to 10%
+Good: Up to 15%
+Ok: Up to 25%
+Bad: Up to 100%
+
+
+Displays
+- OverAll Rating
+- Class Rating
+- Level Of Difficulty Overall
+- Level Of Difficulty of the Class
+- Top 3 Professor Traits
+- Course Evaluation Rating
+- Calculated Trust Interval
+- Calculated Rmp/Course Evaluation Difference
+
+
+Redo tooltip.css/popup.css
+Redo Fonts

@@ -8,6 +8,7 @@ window.addEventListener("clicked", function(evt) {
 
 function injectRatings() {
     
+ 
 
     // Select the document with all Classes
     var allClassPageElement = document.querySelectorAll("iframe")[2]
@@ -23,7 +24,7 @@ function injectRatings() {
 
         
         // Check if this page has already been scanned
-        if (allClassesInfo[0] != previous_page[0]) {
+        if (allClassesInfo[0] != previousPage[0]) {
             
             if (allClassesInfo[0] != undefined) {
 
@@ -54,35 +55,11 @@ function injectRatings() {
                             const thisProfessorurl = professorurl + firstName + "+" + lastName;
 
                             // Find professor ID
-                            const professorID = getProfessorID(thisProfessorurl)
+                            getProfessorIDAndInject(thisProfessorurl, allClassesInfo[currentClassIndex], firstName, lastName, classCode)
 
-                            if (professorID === null) {
-                                addNA(allClassesInfo[currentClassIndex])
-                            } else {
-                                // Calculate overall professor/class rating (return professor rating, sample size, would take again, difficulty)
+                            // console.log(professorID)
 
-                                var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = getInfoFromRMPDataBase(professorID, classCode)
-
-                                // Calculate Trust Interval for professor/class
-
-                                var [professorTrustInterval, professorColor] = getProfessorTrustInterval(overallSampleSize)
-                                var [classTrustInterval, classColor] = getProfessorTrustInterval(classSampleSize)
-
-                                // Create professor and class links
-                                var professorLink = " <a style='color: \"" + professorColor + "\"; font-weight: bold'>(" + overallRating + ")</a>"
-                                var classLink = " <a style='color: \"" + classColor + "\"; font-weight: bold'>(" + classRating + ")</a>"
-
-                                // Create Div
-                                var insertedDIV = document.createElement("div")
-                                insertedDIV.style.display = "inline"
-                                insertedDIV.innerHTML = professorLink + " " + classLink;
-
-                                // Insert Additional Information to DIV
-                                popUpInfo(firstName, lastName, insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval)
-
-                                // Inject the DIV
-                                allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(insertedDIV, allClassesInfo[currentClassIndex].firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling); 
-                            } 
+                            
 
                         }
 
@@ -103,46 +80,87 @@ function injectRatings() {
 
 // 2. Get Professor Rating
 
-function getProfessorID(professorurl) {
+function getProfessorIDAndInject(professorurl, currentIndex, firstName, lastName, classCode) {
+
+    // console.log(professorurl)
 
     // Set array of school id
     var schoolsId = ["675", "772", "4114", "5165"]
 
     // Sent the function to main script
     chrome.runtime.sendMessage({ url: professorurl, type: "profRating"}, function (response) {
+    // Go to numFound class of the JSON
+    var resp = response.JSONresponse;
+    var numFound = resp.response.numFound;
+    // console.log(numFound)
 
-        // Change website to JSON
-        var resp = response.JSONresponse;
+    // NYU School Variable
+    var NYUSchoolFound = false
 
-        // Go to numFound class of the JSON
-        var numFound = resp.response.numFound;
+    // Check if the professor data is found
+    if (numFound > 0) {
 
-        // Check if the professor data is found
-        if (numFound > 0) {
+        // Iterate through each found professor
+        for (let currentProfessorIndex = 0; currentProfessorIndex < numFound; currentProfessorIndex++) {
 
-            // Iterate through each found professor
-            for (let currentProfessorIndex = 0; currentProfessorIndex < numFound; currentProfessorIndex++) {
+            // Check if NYU school is found
+            if (resp.response.docs[currentProfessorIndex] != undefined && schoolsId.includes(resp.response.docs[currentProfessorIndex].schoolid_s)) {
+                NYUSchoolFound = true
 
-                // Check if NYU school is found
-                if (resp.response.docs[currentProfessorIndex] != undefined && schoolsId.includes(resp.response.docs[currentProfessorIndex].schoolid_s)) {
+                // Find Professor ID
+                var profID = resp.response.docs[currentProfessorIndex].pk_id;
+                // console.log(profID)
 
+                // Calculate overall professor/class rating (return professor rating, sample size, would take again, difficulty)
 
-                    // Find Professor ID
-                    var profID = resp.response.docs[currentProfessorIndex].pk_id;
-                    return profID
+                //
+                getInfoFromRMPDataBase(profID, classCode).then(val => {
+                    var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = val
+                    var [professorTrustInterval, professorColor] = getTrustInterval(overallSampleSize)
+                    var [classTrustInterval, classColor] = getTrustInterval(classSampleSize)
+                    console.log(professorTrustInterval)
+                    console.log(classTrustInterval)
 
-                    
+                    // Create professor and class links
+                    var professorLink = " <a style='color: \"" + professorColor + "\"; font-weight: bold'>(" + overallRating + ")</a>"
+                    var classLink = " <a style='color: \"" + classColor + "\"; font-weight: bold'>(" + classRating + ")</a>"
+
+                    // Create Div
+                    var insertedDIV = document.createElement("div")
+                    insertedDIV.style.display = "inline"
+                    insertedDIV.innerHTML = professorLink + " " + classLink;
+
+                    // Insert Additional Information to DIV
+                    popUpInfo(firstName, lastName, insertedDIV, overallRating, overallDifficulty, overallSampleSize, professorTrustInterval, classRating, classDifficulty, classSampleSize, classTrustInterval)
+
+                    // Inject the DIV
+                    currentIndex.firstElementChild.nextElementSibling.nextElementSibling.nextSibling.parentNode.insertBefore(insertedDIV, currentIndex.firstElementChild.nextElementSibling.nextElementSibling.nextSibling.nextSibling); 
+                    })
                 }
+
+                //var [overallRating, classRating, overallDifficulty, classDifficulty, overallSampleSize, classSampleSize] = getInfoFromRMPDataBase(profID, classCode)
+
+                // Calculate Trust Interval for professor/class
+
+                
+
+                
             }
-
-            return null
         }
-
-        })
+    
+    if (NYUSchoolFound == false) {
+        addNA(currentIndex) // CurrentIndex
     }
+        
+    }
+    
+    )}
+    
+    
 
 
-function getInfoFromRMPDataBase(professorID, classCodeString) {
+
+async function getInfoFromRMPDataBase(professorID, classCodeString) {
 
     // Set Current Page
     let currentPage = 1;
@@ -150,7 +168,10 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
     var currentURL = "https://www.ratemyprofessors.com/paginate/professors/ratings?tid=" + professorID + "&page=" + currentPage + "&max=20";
 
     // Set Initial JSON Object
-    var currentJSON = currentURL.JSONresponse;
+    const request = new Request(currentURL)
+    const response = await fetch(request)
+    var currentJSON = await response.json()
+    // console.log(currentJSON)
 
     // 1. Overall Rating
     const overallRatingList = [];
@@ -165,24 +186,25 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
     const classDifficultyList = [];
 
     // Iterate through current responses
-    for (var individual_response in currentJSON.ratings) {
-
+    currentJSON.ratings.forEach(function(individualResponse) {
         // Append Rating to OverallRatingList
-        overallRatingList.push(currentJSON[individual_response].rOverall);
+        overallRatingList.push(individualResponse.rOverall);
 
         // Append Difficulty to overallDifficultyList
-        overallDifficultyList.push(currentJSON[individual_response].rEasy)
+        overallDifficultyList.push(individualResponse.rEasy)
+
+        var className = individualResponse.rClass
 
         // Check if class is in class code
-        if (currentJSON[individual_response].rClass.includes(classCodeString)) {
+        if (className.includes(classCodeString)) {
             // Append Rating to classRatingList if True
-            classRatingList.push(currentJSON[individual_response].rOverall);
+            classRatingList.push(individualResponse.rOverall);
 
             // Append Difficulty to classDifficultyList
-            classDifficultyList.push(currentJSON[individual_response].rEasy)
-        }
-
+            classDifficultyList.push(individualResponse.rEasy)
     }
+    }
+    )
 
 
     // Go through all of the Pages (until remaining is 0)
@@ -195,27 +217,31 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
         currentURL = "https://www.ratemyprofessors.com/paginate/professors/ratings?tid=" + professorID + "&page=" + currentPage + "&max=20";
 
         // Set the URL to the new JSON object
-        currentJSON = currentURL.JSONresponse;
+        const request = new Request(currentURL)
+        const response = await fetch(request)
+        var currentJSON = await response.json()
 
         // Iterate through current responses
-        for (var individual_response in currentJSON.ratings) {
+        currentJSON.ratings.forEach(function(individualResponse) {
 
             // Append Rating to OverallRatingList
-            overallRatingList.push(currentJSON[individual_response].rOverall);
+            overallRatingList.push(individualResponse.rOverall);
     
             // Append Difficulty to overallDifficultyList
-            overallDifficultyList.push(currentJSON[individual_response].rEasy)
+            overallDifficultyList.push(individualResponse.rEasy)
+
+            var className = individualResponse.rClass
     
             // Check if class is in class code
-            if (currentJSON[individual_response].rClass.includes(classCodeString)) {
+            if (className.includes(classCodeString)) {
                 // Append Rating to classRatingList if True
-                classRatingList.push(currentJSON[individual_response].rOverall);
+                classRatingList.push(individualResponse.rOverall);
     
                 // Append Difficulty to classDifficultyList
-                classDifficultyList.push(currentJSON[individual_response].rEasy)
+                classDifficultyList.push(individualResponse.rEasy)
             }
     
-        }
+        })
     }
 
     // 5. Sample Size (Overall/Class)
@@ -235,9 +261,11 @@ function getInfoFromRMPDataBase(professorID, classCodeString) {
 
 
 function getAverageFromList(list) {
-    const returnResult = list.reduce(
+    var returnResult = list.reduce(
         (previousValue, currentValue) => previousValue + currentValue, 0
     )
+
+    returnResult = returnResult / list.length
     return returnResult
 }
 
@@ -246,19 +274,19 @@ function getAverageFromList(list) {
 
 function getTrustInterval(size) {
     if (size >= 50) {
-        return "Very Reliable", "Dark Green"
+        return ["Very Reliable", "Dark Green"]
     }
-    else if (49 >= size >= 30) {
-        return "Reliable", "Green"
+    else if (49 >= size && size >= 30) {
+        return ["Reliable", "Green"]
     }
-    else if (29 >= size >= 20) {
-        return "Semi-Reliable", "Light Green"
+    else if (29 >= size && size >= 20) {
+        return ["Semi-Reliable", "Light Green"]
     }
-    else if (19 >= size >= 10) {
-        return "Not Very Reliable", "Yellow"
+    else if (19 >= size && size >= 10) {
+        return ["Not Very Reliable", "Yellow"]
     }
     else {
-        return "Do Not Rely", "Red"
+        return ["Do Not Rely", "Red"]
     }
 }
 
